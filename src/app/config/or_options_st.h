@@ -706,6 +706,8 @@ struct or_options_t {
    * over randomly chosen exits. */
   int ClientRejectInternalAddresses;
 
+  int BandwidthModified;
+
   /** If true, clients may connect over IPv4. If false, they will avoid
    * connecting over IPv4. We enforce this for OR and Dir connections. */
   int ClientUseIPv4;

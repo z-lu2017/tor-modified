@@ -217,6 +217,7 @@ static const config_abbrev_t option_abbrevs_[] = {
   { "AutomapHostOnResolve", "AutomapHostsOnResolve", 0, 0},
   { "BandwidthRateBytes", "BandwidthRate", 0, 0},
   { "BandwidthBurstBytes", "BandwidthBurst", 0, 0},
+  { "BandwidthModified", "BandwidthModified", 0, 0},
   { "DirFetchPostPeriod", "StatusFetchPeriod", 0, 0},
   { "DirServer", "DirAuthority", 0, 0}, /* XXXX later, make this warn? */
   { "MaxConn", "ConnLimit", 0, 1},
@@ -348,6 +349,7 @@ static const config_var_t option_vars_[] = {
   V(AvoidDiskWrites,             BOOL,     "0"),
   V(BandwidthBurst,              MEMUNIT,  "1 GB"),
   V(BandwidthRate,               MEMUNIT,  "1 GB"),
+  V(BandwidthModified,           BOOL,     "0"),
   V(BridgeAuthoritativeDir,      BOOL,     "0"),
   VAR("Bridge",                  LINELIST, Bridges,    NULL),
   V(BridgePassword,              STRING,   NULL),

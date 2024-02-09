@@ -14,7 +14,10 @@ LIBTOR_APP_A_SOURCES += 				\
 	src/feature/nodelist/routerlist.c	\
 	src/feature/nodelist/routerset.c	\
 	src/feature/nodelist/fmt_routerstatus.c	\
-	src/feature/nodelist/torcert.c
+	src/feature/nodelist/torcert.c \
+	src/feature/nodelist/read.c\
+	src/feature/nodelist/checkROA.c\
+	src/feature/nodelist/checkROV.c
 
 # ADD_C_FILE: INSERT HEADERS HERE.
 noinst_HEADERS +=					\
@@ -46,4 +49,7 @@ noinst_HEADERS +=					\
 	src/feature/nodelist/routerstatus_st.h		\
 	src/feature/nodelist/signed_descriptor_st.h	\
 	src/feature/nodelist/torcert.h			\
-	src/feature/nodelist/vote_routerstatus_st.h
+	src/feature/nodelist/vote_routerstatus_st.h \
+	src/feature/nodelist/read.h\
+	src/feature/nodelist/checkROA.h\
+	src/feature/nodelist/checkROV.h

@@ -41,6 +41,9 @@ struct node_t {
   /** Position of the node within the list of nodes */
   int nodelist_idx;
 
+  // Added property to hold modified bandwidth
+  int bw_modified;
+
   /** The identity digest of this node_t.  No more than one node_t per
    * identity may exist at a time. */
   char identity[DIGEST_LEN];

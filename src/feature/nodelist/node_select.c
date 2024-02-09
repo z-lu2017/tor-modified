@@ -41,6 +41,14 @@
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerstatus_st.h"
 
+#include "feature/nodelist/read.h"
+#include "feature/nodelist/checkROA.h"
+#include "feature/nodelist/checkROV.h"
+#include "app/config/resolve_addr.c"
+#include <stdio.h>
+#include <string.h>
+#include <stdbool.h>
+
 static int compute_weighted_bandwidths(const smartlist_t *sl,
                                        bandwidth_weight_rule_t rule,
                                        double **bandwidths_out,
@@ -705,6 +713,260 @@ compute_weighted_bandwidths(const smartlist_t *sl,
 
   bandwidths = tor_calloc(smartlist_len(sl), sizeof(double));
 
+
+  // check if we have already modified bandwidth, if so, skip it to avoid unnecessary file reads
+  or_options_t *options = get_options();
+  int modified_flag = options->BandwidthModified;
+
+  if (modified_flag == false){
+      printf("Flag is not set, we are reading in file and update node struct \n");
+
+      // get client IP from torrc file 
+      int family = AF_INET;
+      int warn_severity = 0;
+      resolved_addr_method_t method_out;
+      char *hostname_out;
+      tor_addr_t addr_out;
+
+      // char array to hold client IP
+      char clientIP[100];
+      for(int i=0;i<100;i++)
+      {
+          clientIP[i] = ' ';
+      }
+
+      
+      fn_address_ret_t t = get_address_from_config(options, warn_severity, family, &method_out, &hostname_out, &addr_out);
+      size_t len = 100;
+      int decorate = 0;
+      tor_addr_to_str(clientIP, &addr_out, len, decorate);
+
+      //count the number of lines in the ROA csv file to create appropriate length list 
+      int count = getCount();
+      //process the roa csv file into IP network for coverage validation 
+      struct IPNetWork* ROAList = processROAcsv(count);
+
+      // PREP FOR ROV CHECKING ---------------------
+      int ROVcount = getROVCount(); //get size of ROV lisyoutu
+      int * ASNarray = getROVList(); //preprocess ASN to IP mapping
+      struct IPNetWork* ROVList = readMapping(ROVcount); //store entry of mapping in custom 
+
+      // check client rov coverage 
+      int ClientROV = ip2ROV(ROVList, clientIP, ROVcount, ASNarray);
+      // free malloc arrays 
+      int ClientROA = checkROA(ROAList, clientIP , count);
+
+      // array used to hold modified weights
+      double optimized_weights_modified[347] = {-1};
+      char arr[347][20] = {'\0'};
+
+      // based on client roa and rov status, read in the appropriate file
+      FILE *file_name = fopen("/home/ubuntu/TOR-RPKI/TOR-RPKI_Siyang/sim_roa_rov_L2/relayname.txt", "r");
+      int u = 0;
+      char s[20];
+      while (fscanf(file_name, "%s", &s)  > 0){
+        strcpy(arr[u], s);
+        u++;
+      }
+      fclose(file_name);
+
+      // replace weight here with the appropriate version based on roa and rov status
+      if (ClientROA == 1 && ClientROV == 1){
+        printf("using final weight both \n");
+        // load in weights for both
+        FILE *file1 = fopen("/home/ubuntu/TOR-RPKI/TOR-RPKI_Siyang/sim_roa_rov_L2/both.txt", "r");
+        int i = 0;
+        double w;
+        while (fscanf(file1, "%lf", &w) > 0){
+          optimized_weights_modified[i] = w;
+          i++;
+        }
+        fclose(file1);
+      }
+      if (ClientROA == 1 && ClientROV == 0){
+        printf("using final weight roa \n");
+        // load in weights for roa
+        FILE *file2 = fopen("/home/ubuntu/TOR-RPKI/TOR-RPKI_Siyang/sim_roa_rov_L2/roa.txt", "r");
+        int i2 = 0;
+        double w2;
+        while (fscanf(file2, "%lf", &w2) > 0){
+          optimized_weights_modified[i2] = w2;
+          i2++;
+        }
+        fclose(file2);
+      }
+      if (ClientROA == 0 && ClientROV == 1){
+        printf("using final weight rov \n");
+        // load in weights for rov
+        FILE *file3 = fopen("/home/ubuntu/TOR-RPKI/TOR-RPKI_Siyang/sim_roa_rov_L2/rov.txt", "r");
+        int i3 = 0;
+        double w3;
+        while (fscanf(file3, "%lf", &w3) > 0){
+          optimized_weights_modified[i3] = w3;
+          i3++;
+        }
+        fclose(file3);
+      }
+      if (ClientROA == 0 && ClientROV == 0){
+        printf("using final weight neither \n");
+        // load in weights for neither
+        FILE *file4 = fopen("/home/ubuntu/TOR-RPKI/TOR-RPKI_Siyang/sim_roa_rov_L2/neither.txt", "r");
+        int i4 = 0;
+        double w4;
+        while (fscanf(file4, "%lf", &w4) > 0){
+          optimized_weights_modified[i4] = w4;
+          i4++;
+        }
+        fclose(file4);
+      }    
+
+      // for each relay, load up the appropriate modified weight
+      SMARTLIST_FOREACH_BEGIN(sl, node_t *, node) {
+        // iterate through all nicknames to find the appropriate match
+        // if match found, set final weight to corresponding weight; if not do not modify the weight
+        char nickname[20];
+        strcpy(nickname, node->rs->nickname);
+        printf("printing nickname here");
+        printf("%s\n", nickname); 
+        
+        for (size_t i = 0; i < sizeof(arr) / sizeof(arr[0]); i++){
+          if (strcmp(arr[i], nickname) == 0){
+            printf("find relay nickname match! \n");
+            // printf("%s\n", nickname); 
+            // printf("%s\n", arr[i]);
+            node->bw_modified = optimized_weights_modified[i];
+            printf("weights modified =  %lf\n", optimized_weights_modified[i]); 
+            break;
+          }
+        }
+      } SMARTLIST_FOREACH_END(node);      
+    
+      // turn on flag so we can skip this step in the remaining time
+      options->BandwidthModified = 1;
+      char *errmsg = NULL;
+      if (set_options(options, &errmsg) < 0) {
+        printf("Failed to update options: %s\n", errmsg);
+        tor_free(errmsg);
+      }
+      printf("done setting new flag, TRIGGER 2\n");
+
+      tor_free(ROAList);
+      tor_free(ROVList);
+      tor_free(ASNarray);
+  }
+
+  // check if it's guard matching, if so perform ROA and ROV checking then use the appropriate weight
+  if (rule == WEIGHT_FOR_GUARD){
+    // Cycle through smartlist and total the bandwidth.
+    static int warned_missing_bw = 0;
+    SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
+      int is_exit = 0, is_guard = 0, is_dir = 0, this_bw = 0;
+      double weight = 1;
+      double weight_without_guard_flag = 0; /* Used for guardfraction */
+      double final_weight = 0;
+      is_exit = node->is_exit && ! node->is_bad_exit;
+      is_guard = node->is_possible_guard;
+      is_dir = node_is_dir(node);
+      if (node->rs) {
+        if (!node->rs->has_bandwidth) {
+          /* This should never happen, unless all the authorities downgrade
+          * to 0.2.0 or rogue routerstatuses get inserted into our consensus. */
+          if (! warned_missing_bw) {
+            log_warn(LD_BUG,
+                  "Consensus is missing some bandwidths. Using a naive "
+                  "router selection algorithm");
+            warned_missing_bw = 1;
+          }
+          this_bw = 30000; /* Chosen arbitrarily */
+        } else {
+          this_bw = kb_to_bytes(node->rs->bandwidth_kb);
+        }
+      } else if (node->ri) {
+        /* bridge or other descriptor not in our consensus */
+        this_bw = bridge_get_advertised_bandwidth_bounded(node->ri);
+      } else {
+        /* We can't use this one. */
+        continue;
+      }
+
+      if (is_guard && is_exit) {
+        weight = (is_dir ? Wdb*Wd : Wd);
+        weight_without_guard_flag = (is_dir ? Web*We : We);
+      } else if (is_guard) {
+        weight = (is_dir ? Wgb*Wg : Wg);
+        weight_without_guard_flag = (is_dir ? Wmb*Wm : Wm);
+      } else if (is_exit) {
+        weight = (is_dir ? Web*We : We);
+      } else { // middle
+        weight = (is_dir ? Wmb*Wm : Wm);
+      }
+      /* These should be impossible; but overflows here would be bad, so let's
+      * make sure. */
+      if (this_bw < 0)
+        this_bw = 0;
+      if (weight < 0.0)
+        weight = 0.0;
+      if (weight_without_guard_flag < 0.0)
+        weight_without_guard_flag = 0.0;
+
+      /* If guardfraction information is available in the consensus, we
+      * want to calculate this router's bandwidth according to its
+      * guardfraction. Quoting from proposal236:
+      *
+      *    Let Wpf denote the weight from the 'bandwidth-weights' line a
+      *    client would apply to N for position p if it had the guard
+      *    flag, Wpn the weight if it did not have the guard flag, and B the
+      *    measured bandwidth of N in the consensus.  Then instead of choosing
+      *    N for position p proportionally to Wpf*B or Wpn*B, clients should
+      *    choose N proportionally to F*Wpf*B + (1-F)*Wpn*B.
+      */
+      if (node->rs && node->rs->has_guardfraction && rule != WEIGHT_FOR_GUARD) {
+        /* We should only have guardfraction set if the node has the Guard
+          flag. */
+        if (! node->rs->is_possible_guard) {
+          log_buggy_rs_source(node->rs);
+        }
+
+        guard_get_guardfraction_bandwidth(&guardfraction_bw,
+                                          this_bw,
+                                          node->rs->guardfraction_percentage);
+
+        /* Calculate final_weight = F*Wpf*B + (1-F)*Wpn*B */
+        final_weight =
+          guardfraction_bw.guard_bw * weight +
+          guardfraction_bw.non_guard_bw * weight_without_guard_flag;
+
+        log_debug(LD_GENERAL, "%s: Guardfraction weight %f instead of %f (%s)",
+                  node->rs->nickname, final_weight, weight*this_bw,
+                  bandwidth_weight_rule_to_string(rule));
+      } else { /* no guardfraction information. calculate the weight normally. */
+        final_weight = weight*this_bw;
+      }
+
+      // TODO: update final weight with the modified weight
+      final_weight = node->bw_modified;
+
+      bandwidths[node_sl_idx] = final_weight;
+      total_bandwidth += final_weight;
+    } SMARTLIST_FOREACH_END(node);
+
+ 
+
+    log_debug(LD_CIRC, "Generated weighted bandwidths for rule %s based "
+          "on weights "
+          "Wg=%f Wm=%f We=%f Wd=%f with total bw %f",
+          bandwidth_weight_rule_to_string(rule),
+          Wg, Wm, We, Wd, total_bandwidth);
+
+    *bandwidths_out = bandwidths;
+
+    if (total_bandwidth_out) {
+      *total_bandwidth_out = total_bandwidth;
+    }
+
+    return 0;
+  }
+    
   // Cycle through smartlist and total the bandwidth.
   static int warned_missing_bw = 0;
   SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
