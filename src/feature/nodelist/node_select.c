@@ -720,105 +720,15 @@ compute_weighted_bandwidths(const smartlist_t *sl,
 
   if (modified_flag == false){
       printf("Flag is not set, we are reading in file and update node struct \n");
-
-      // get client IP from torrc file 
-      int family = AF_INET;
-      int warn_severity = 0;
-      resolved_addr_method_t method_out;
-      char *hostname_out;
-      tor_addr_t addr_out;
-
-      // char array to hold client IP
-      char clientIP[100];
-      for(int i=0;i<100;i++)
-      {
-          clientIP[i] = ' ';
-      }
-
-      
-      fn_address_ret_t t = get_address_from_config(options, warn_severity, family, &method_out, &hostname_out, &addr_out);
-      size_t len = 100;
-      int decorate = 0;
-      tor_addr_to_str(clientIP, &addr_out, len, decorate);
-
       //count the number of lines in the ROA csv file to create appropriate length list 
       int count = getCount();
+
       //process the roa csv file into IP network for coverage validation 
       struct IPNetWork* ROAList = processROAcsv(count);
 
-      // PREP FOR ROV CHECKING ---------------------
-      int ROVcount = getROVCount(); //get size of ROV lisyoutu
-      int * ASNarray = getROVList(); //preprocess ASN to IP mapping
-      struct IPNetWork* ROVList = readMapping(ROVcount); //store entry of mapping in custom 
-
-      // check client rov coverage 
-      int ClientROV = ip2ROV(ROVList, clientIP, ROVcount, ASNarray);
       // free malloc arrays 
-      int ClientROA = checkROA(ROAList, clientIP , count);
 
-      // array used to hold modified weights
-      double optimized_weights_modified[347] = {-1};
-      char arr[347][20] = {'\0'};
-
-      // based on client roa and rov status, read in the appropriate file
-      FILE *file_name = fopen("/home/ubuntu/TOR-RPKI/TOR-RPKI_Siyang/sim_roa_rov_L2/relayname.txt", "r");
-      int u = 0;
-      char s[20];
-      while (fscanf(file_name, "%s", &s)  > 0){
-        strcpy(arr[u], s);
-        u++;
-      }
-      fclose(file_name);
-
-      // replace weight here with the appropriate version based on roa and rov status
-      if (ClientROA == 1 && ClientROV == 1){
-        printf("using final weight both \n");
-        // load in weights for both
-        FILE *file1 = fopen("/home/ubuntu/TOR-RPKI/TOR-RPKI_Siyang/sim_roa_rov_L2/both.txt", "r");
-        int i = 0;
-        double w;
-        while (fscanf(file1, "%lf", &w) > 0){
-          optimized_weights_modified[i] = w;
-          i++;
-        }
-        fclose(file1);
-      }
-      if (ClientROA == 1 && ClientROV == 0){
-        printf("using final weight roa \n");
-        // load in weights for roa
-        FILE *file2 = fopen("/home/ubuntu/TOR-RPKI/TOR-RPKI_Siyang/sim_roa_rov_L2/roa.txt", "r");
-        int i2 = 0;
-        double w2;
-        while (fscanf(file2, "%lf", &w2) > 0){
-          optimized_weights_modified[i2] = w2;
-          i2++;
-        }
-        fclose(file2);
-      }
-      if (ClientROA == 0 && ClientROV == 1){
-        printf("using final weight rov \n");
-        // load in weights for rov
-        FILE *file3 = fopen("/home/ubuntu/TOR-RPKI/TOR-RPKI_Siyang/sim_roa_rov_L2/rov.txt", "r");
-        int i3 = 0;
-        double w3;
-        while (fscanf(file3, "%lf", &w3) > 0){
-          optimized_weights_modified[i3] = w3;
-          i3++;
-        }
-        fclose(file3);
-      }
-      if (ClientROA == 0 && ClientROV == 0){
-        printf("using final weight neither \n");
-        // load in weights for neither
-        FILE *file4 = fopen("/home/ubuntu/TOR-RPKI/TOR-RPKI_Siyang/sim_roa_rov_L2/neither.txt", "r");
-        int i4 = 0;
-        double w4;
-        while (fscanf(file4, "%lf", &w4) > 0){
-          optimized_weights_modified[i4] = w4;
-          i4++;
-        }
-        fclose(file4);
-      }    
+      double discount = 0.8;
 
       // for each relay, load up the appropriate modified weight
       SMARTLIST_FOREACH_BEGIN(sl, node_t *, node) {
@@ -828,17 +738,31 @@ compute_weighted_bandwidths(const smartlist_t *sl,
         strcpy(nickname, node->rs->nickname);
         printf("printing nickname here");
         printf("%s\n", nickname); 
-        
-        for (size_t i = 0; i < sizeof(arr) / sizeof(arr[0]); i++){
-          if (strcmp(arr[i], nickname) == 0){
-            printf("find relay nickname match! \n");
-            // printf("%s\n", nickname); 
-            // printf("%s\n", arr[i]);
-            node->bw_modified = optimized_weights_modified[i];
-            printf("weights modified =  %lf\n", optimized_weights_modified[i]); 
-            break;
-          }
+
+        tor_addr_t ipv4_addr = node->rs->ipv4_addr;
+
+        // char array to hold relay IP
+        char relayIP[100];
+        for(int i=0;i<100;i++)
+        {
+            relayIP[i] = ' ';
         }
+
+        size_t len = 100;
+        int decorate = 0;
+        tor_addr_to_str(relayIP, &ipv4_addr, len, decorate);
+
+        int relayROA = checkROA(ROAList, relayIP , count);
+        
+        if (relayROA == 0){
+          node->bw_modified = discount;
+          printf("applying discount to relay without ROA \n"); 
+        }
+
+        if (relayROA == 1){
+          node->bw_modified  = 1;
+        }
+  
       } SMARTLIST_FOREACH_END(node);      
     
       // turn on flag so we can skip this step in the remaining time
@@ -851,8 +775,6 @@ compute_weighted_bandwidths(const smartlist_t *sl,
       printf("done setting new flag, TRIGGER 2\n");
 
       tor_free(ROAList);
-      tor_free(ROVList);
-      tor_free(ASNarray);
   }
 
   // check if it's guard matching, if so perform ROA and ROV checking then use the appropriate weight
@@ -943,8 +865,8 @@ compute_weighted_bandwidths(const smartlist_t *sl,
         final_weight = weight*this_bw;
       }
 
-      // TODO: update final weight with the modified weight
-      final_weight = node->bw_modified;
+      // update with discount if needed
+      final_weight = final_weight * node->bw_modified;
 
       bandwidths[node_sl_idx] = final_weight;
       total_bandwidth += final_weight;
