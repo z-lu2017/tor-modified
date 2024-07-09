@@ -728,8 +728,6 @@ compute_weighted_bandwidths(const smartlist_t *sl,
 
       // free malloc arrays 
 
-      double discount = 0.8;
-
       // for each relay, load up the appropriate modified weight
       SMARTLIST_FOREACH_BEGIN(sl, node_t *, node) {
         // iterate through all nicknames to find the appropriate match
@@ -755,7 +753,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
         int relayROA = checkROA(ROAList, relayIP , count);
         
         if (relayROA == 0){
-          node->bw_modified = discount;
+          node->bw_modified = 0;
           printf("applying discount to relay without ROA \n"); 
         }
 
@@ -781,6 +779,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
   if (rule == WEIGHT_FOR_GUARD){
     // Cycle through smartlist and total the bandwidth.
     static int warned_missing_bw = 0;
+    double discount = 0.8;
     SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
       int is_exit = 0, is_guard = 0, is_dir = 0, this_bw = 0;
       double weight = 1;
@@ -866,7 +865,10 @@ compute_weighted_bandwidths(const smartlist_t *sl,
       }
 
       // update with discount if needed
-      final_weight = final_weight * node->bw_modified;
+      if (node->bw_modified == 0){
+        final_weight = final_weight * discount;
+      }
+      
 
       bandwidths[node_sl_idx] = final_weight;
       total_bandwidth += final_weight;
