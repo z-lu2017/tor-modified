@@ -761,7 +761,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
       char arr[347][20] = {'\0'};
 
       // based on client roa and rov status, read in the appropriate file
-      FILE *file_name = fopen("/home/ubuntu/TOR-RPKI/TOR-RPKI_Siyang/sim_roa_rov_L2/relayname.txt", "r");
+      FILE *file_name = fopen("/home/ubuntu/TOR-RPKI/sim_roa_rov_L2/relayname.txt", "r");
       int u = 0;
       char s[20];
       while (fscanf(file_name, "%s", &s)  > 0){
@@ -774,7 +774,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
       if (ClientROA == 1 && ClientROV == 1){
         printf("using final weight both \n");
         // load in weights for both
-        FILE *file1 = fopen("/home/ubuntu/TOR-RPKI/TOR-RPKI_Siyang/sim_roa_rov_L2/both.txt", "r");
+        FILE *file1 = fopen("/home/ubuntu/TOR-RPKI/sim_roa_rov_L2/both.txt", "r");
         int i = 0;
         double w;
         while (fscanf(file1, "%lf", &w) > 0){
@@ -786,7 +786,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
       if (ClientROA == 1 && ClientROV == 0){
         printf("using final weight roa \n");
         // load in weights for roa
-        FILE *file2 = fopen("/home/ubuntu/TOR-RPKI/TOR-RPKI_Siyang/sim_roa_rov_L2/roa.txt", "r");
+        FILE *file2 = fopen("/home/ubuntu/TOR-RPKI/sim_roa_rov_L2/roa.txt", "r");
         int i2 = 0;
         double w2;
         while (fscanf(file2, "%lf", &w2) > 0){
@@ -798,7 +798,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
       if (ClientROA == 0 && ClientROV == 1){
         printf("using final weight rov \n");
         // load in weights for rov
-        FILE *file3 = fopen("/home/ubuntu/TOR-RPKI/TOR-RPKI_Siyang/sim_roa_rov_L2/rov.txt", "r");
+        FILE *file3 = fopen("/home/ubuntu/TOR-RPKI/sim_roa_rov_L2/rov.txt", "r");
         int i3 = 0;
         double w3;
         while (fscanf(file3, "%lf", &w3) > 0){
@@ -810,7 +810,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
       if (ClientROA == 0 && ClientROV == 0){
         printf("using final weight neither \n");
         // load in weights for neither
-        FILE *file4 = fopen("/home/ubuntu/TOR-RPKI/TOR-RPKI_Siyang/sim_roa_rov_L2/neither.txt", "r");
+        FILE *file4 = fopen("/home/ubuntu/TOR-RPKI/sim_roa_rov_L2/neither.txt", "r");
         int i4 = 0;
         double w4;
         while (fscanf(file4, "%lf", &w4) > 0){

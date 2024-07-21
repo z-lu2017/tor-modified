@@ -55,7 +55,7 @@ int getROVCount(void){
 
     
     // make the pointer and start opening the file 
-    strcat(pathFromConfig2, "routeviews-rv2-20230501-1200.pfx2as");
+    strcat(pathFromConfig2, "routeviews-rv2-20240501-1000.pfx2as");
     // open for the first time to count lines in the file 
     fp = fopen(pathFromConfig2, "r");
 
@@ -92,7 +92,7 @@ struct IPNetWork* readMapping(int count){
 
     // make the pointer and start opening the file 
 
-    strcat(pathFromConfig2, "routeviews-rv2-20230501-1200.pfx2as");
+    strcat(pathFromConfig2, "routeviews-rv2-20240501-1000.pfx2as");
     char line[200]; //giant char to store 1 line in csv
     fp = fopen(pathFromConfig2, "r");
     
