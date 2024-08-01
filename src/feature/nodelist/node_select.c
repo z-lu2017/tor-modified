@@ -757,8 +757,8 @@ compute_weighted_bandwidths(const smartlist_t *sl,
       int ClientROA = checkROA(ROAList, clientIP , count);
 
       // array used to hold modified weights
-      double optimized_weights_modified[347] = {-1};
-      char arr[347][20] = {'\0'};
+      double optimized_weights_modified[500] = {-1};
+      char arr[500][20] = {'\0'};
 
       // based on client roa and rov status, read in the appropriate file
       FILE *file_name = fopen("/home/ubuntu/TOR-RPKI/sim_roa_rov_L2/relayname.txt", "r");
