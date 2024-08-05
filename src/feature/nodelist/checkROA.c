@@ -62,7 +62,7 @@ int getCount(void){
     // make the pointer and start opening the file 
     FILE *fp;
     char * pathFromConfig = getFilePath();
-    strcat(pathFromConfig, "2023-05-01.csv");
+    strcat(pathFromConfig, "20240501.csv");
     // open for the first time to count lines in the file 
     //char pathFromConfig[100] = "/home/ubuntu/TOR-RPKI/TOR-RPKI_Siyang/sim_roa_rov_L2/both.txt";
     fp = fopen(pathFromConfig, "r");
@@ -97,7 +97,7 @@ struct IPNetWork* processROAcsv(int count){
 
     char * pathFromConfig = getFilePath();
     
-    strcat(pathFromConfig, "2023-05-01.csv");
+    strcat(pathFromConfig, "20240501.csv");
     char line[100]; //giant char to store 1 line in csv
     fp = fopen(pathFromConfig, "r");
     if (fp == NULL){
@@ -203,7 +203,7 @@ int processListofIP(void){
     if(pathFromConfig == NULL){
         pathFromConfig = getFilePath();
     }
-    strcat(pathFromConfig, "2023-05-01.csv");
+    strcat(pathFromConfig, "20240501.csv");
     // open for the first time to count lines in the file 
     fp = fopen(pathFromConfig, "r");
     // if file open fails print error msg 
@@ -227,7 +227,7 @@ int processListofIP(void){
     // open file again for processing 
     fclose(fp);
     
-    fp = fopen(strcat(pathFromConfig, "2023-05-01.csv"), "r");
+    fp = fopen(strcat(pathFromConfig, "20240501.csv"), "r");
     // skip the header line so it doesnt get processed 
     fgets(line, 100, fp);
 
