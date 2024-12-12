@@ -1,73 +1,12 @@
-Tor protects your privacy on the internet by hiding the connection between
-your Internet address and the services you use. We believe Tor is reasonably
-secure, but please ensure you read the instructions and configure it properly.
+# TOR-RPKI
 
-## Build
+This is part of the TOR-RPKI project.
 
-To build Tor from source:
+## Description
 
-```
-./configure
-make
-make install
-```
+This version of Tor is customized to perform discount and matching selection algorithm described in the [TOR-RPKI repo](https://github.com/z-lu2017/TOR-RPKI.git) For discount selection algorithm, Tor loads in the ROA file and checks relay for ROA coverage. For matching algorithm, Tor loads in ROA and ROV database and checks relay ROA/ROV coverage. For each client, it then checks its ROA/ROV coverage and loads a specific version of the optimized weights for relay selection.
 
-To build Tor from a just-cloned git repository:
 
-```
-./autogen.sh
-./configure
-make
-make install
-```
+## Acknowledgments
 
-## Releases
-
-The tarballs, checksums and signatures can be found here: https://dist.torproject.org
-
-- Checksum: `<tarball-name>.sha256sum`
-- Signatures: `<tarball-name>.sha256sum.asc`
-
-### Schedule
-
-You can find our release schedule here:
-
-- https://gitlab.torproject.org/tpo/core/team/-/wikis/NetworkTeam/CoreTorReleases
-
-### Keys that CAN sign a release
-
-The following keys are the maintainers of this repository. One or many of
-these keys can sign the releases, do NOT expect them all:
-
-- Alexander Færøy:
-    [514102454D0A87DB0767A1EBBE6A0531C18A9179](https://keys.openpgp.org/vks/v1/by-fingerprint/1C1BC007A9F607AA8152C040BEA7B180B1491921)
-- David Goulet:
-    [B74417EDDF22AC9F9E90F49142E86A2A11F48D36](https://keys.openpgp.org/vks/v1/by-fingerprint/B74417EDDF22AC9F9E90F49142E86A2A11F48D36)
-- Nick Mathewson:
-    [2133BC600AB133E1D826D173FE43009C4607B1FB](https://keys.openpgp.org/vks/v1/by-fingerprint/2133BC600AB133E1D826D173FE43009C4607B1FB)
-
-## Development
-
-See our hacking documentation in [doc/HACKING/](./doc/HACKING).
-
-## Resources
-
-Home page:
-
-- https://www.torproject.org/
-
-Download new versions:
-
-- https://www.torproject.org/download/tor
-
-How to verify Tor source:
-
-- https://support.torproject.org/little-t-tor/
-
-Documentation and Frequently Asked Questions:
-
-- https://support.torproject.org/
-
-How to run a Tor relay:
-
-- https://community.torproject.org/relay/ 
+* We modified Tor source code based on Tor version 0.4.8.7. The original Tor code can be found [here](https://git.torproject.org/tor.git)
